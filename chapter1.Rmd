@@ -1,7 +1,22 @@
 
 # About the project
 
-*Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
+### My thoughts in the beginning of the course
+
+Overall, I was very excited when I found this course on WebOodi. The course appeared to be **just what I need** to get my PhD research started, as a few years have passed since I have used statistical methods. Nevertheless, I am also a little nervous: Will the course be too difficult, and will I have enough time to complete it? I have just started to learn R this autumn, and many aspects of it are still unfamiliar to me (not to mention the Git!). 
+
+### My expectations for the course
+
+I hope that I have the resources to complete this course, since I am confident that the course would help me to get a myriad of useful skills for my PhD project, e. g. 
+
+* managing projects in R and organizing my statistical work
+* conducting different statistical analysis in R
+* processing large amounts of data in a flexible and intelligent way
+* learning to use some tools to conduct *open* research
+
+
+
+[Click here to see my GitHub repository](https://github.com/johanrab/IODS-project)
 
 ```{r}
 # This is a so-called "R chunk" where you can write R code.
@@ -9,5 +24,5 @@
 date()
 
 ```
-The text continues here.
 
+I believe that this course will require me to work hard, but I hope that it also brings some **joy of learning**!
