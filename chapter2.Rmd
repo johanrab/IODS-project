@@ -2,12 +2,49 @@
 
 *Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+
 
 ```{r}
 date()
-```
+read.csv("data/Learning2014_SUBSET.csv", sep = ",", header = TRUE)
+sub_learning2014$gender <- as.factor(sub_learning2014$gender)
+str(sub_learning2014)
+dim(sub_learning2014)
 
-Here we go again...
+```
+The data id based on the survey of approaches to learning, which was implemented on a statistics course in fall 2014. The data includes 166 subjects and 7 variables: gender, age, attitude towards statistics (on a scale of 1-5), learning strategies (variables 'deep', 'stra' and 'surf', on scales of 1-5), and exam points 
+
+Next, I will explore the variables and their correlations:
+
+```{r}
+summary (sub_learning2014$gender) 
+summary (sub_learning2014$Age)
+summary (sub_learning2014$attitude)
+summary (sub_learning2014$deep) 
+summary (sub_learning2014$stra)
+summary (sub_learning2014$surf)
+summary (sub_learning2014$Points)
+
+boxplot(sub_learning2014$Age)
+boxplot (sub_learning2014$attitude)
+boxplot (sub_learning2014$deep) 
+boxplot (sub_learning2014$stra)
+boxplot (sub_learning2014$surf)
+boxplot (sub_learning2014$Points)
+
+pairs(sub_learning2014[-1], col = sub_learning2014$gender)
+
+```
+The distribution of Age is skewed towards the lower end of the scale with 75 % of the observations falling between (17,27).
+The distribution of attitude is normal, not skewed, and seemes to have no outliers.
+The distribution of deep is quite normal, and has two potential outliers in the lower end of the distribution.
+The distribution of stra looks normal and seems to have no outliers.
+The distribution of surf also looks normal and has one potential outlier in the upper end of the distribution.
+The distribution of Points is pretty normal too. The observations seem to focus a little more on the upper side of the distribution.
+
+
+
+
+
+
+
