@@ -27,8 +27,10 @@ learning2014$surf <- rowMeans(surface_columns)
 strategic_columns <- select(learning2014, one_of(strategic_questions))
 learning2014$stra <- rowMeans(strategic_columns)
 
+learning2014$attitude <- learning2014$Attitude / 10
+
 # making a new subset of the data and erasing the rows in which points is 0
-keep_columns <- c("gender","Age","Attitude", "deep", "stra", "surf", "Points")
+keep_columns <- c("gender","Age","attitude", "deep", "stra", "surf", "Points")
 sub_learning2014 <- select(learning2014, one_of(keep_columns))
 
 sub_learning2014 <- filter(sub_learning2014, Points > 0)
