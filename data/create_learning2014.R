@@ -42,7 +42,7 @@ getwd()
 dir()
 
 # saving the new subset of data for the analysis
-write.csv(sub_learning2014, file = "data/Learning2014_SUBSET.csv")
-read.csv("data/Learning2014_SUBSET.csv")
+write.csv(sub_learning2014, file = "data/Learning2014_SUBSET.csv", row.names = FALSE)
+sub_learning2014 <- read.csv("data/Learning2014_SUBSET.csv")
 str(sub_learning2014)
 head(sub_learning2014)

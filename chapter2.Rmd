@@ -1,50 +1,115 @@
-# Insert chapter 2 title here
+# Report of exercice 2
 
-*Describe the work you have done this week and summarize your learning.*
+In the beginning of this week, I tried to recall what is regression analysis and read about it in Kimmo's textbook. Doing exercices I found it very helpful that I had used regression analysis before, even though not in R. The data camp exercices were very useful. This week I found most difficult the "project managing" parts of the exercices: saving the data, knitting, and understanding, which file to use etc. Anyway, I am confident that I succeeded for the most part :) 
 
+## Part 1.  
+I read the data to RMarkdown-file. It was hard for me to realize the details of the data saving and reading process, mut eventually I got it done, **yippii!** Then I explored the structure of the dataset. I noticed that the variable "gender" was type "character", which was a problem later, so I changed it to be type "factor".
 
+```{r Code part 1}
 
-```{r}
-date()
-read.csv("data/Learning2014_SUBSET.csv", sep = ",", header = TRUE)
+sub_learning2014 <- read.csv("data/Learning2014_SUBSET.csv", sep = ",", header = TRUE)
 sub_learning2014$gender <- as.factor(sub_learning2014$gender)
 str(sub_learning2014)
 dim(sub_learning2014)
 
 ```
-The data id based on the survey of approaches to learning, which was implemented on a statistics course in fall 2014. The data includes 166 subjects and 7 variables: gender, age, attitude towards statistics (on a scale of 1-5), learning strategies (variables 'deep', 'stra' and 'surf', on scales of 1-5), and exam points 
+**My description of the dataset**: The data is based on the survey of approaches to learning, which was implemented on a statistics course in fall 2014. The data includes 166 subjects and 7 variables: gender, age, attitude towards statistics (on a scale of 1-5), learning strategies (variables 'deep', 'stra' and 'surf', on scales of 1-5), and exam points.  
 
-Next, I will explore the variables and their correlations:
+## Part 2.  
+Next, I will explore the distributions and correlations of the variables. Don't get confused with the order of the boxplots - I will draw first the boxplots of *Age* and *Points* and then the boxplots of the rest of the variables since *attitude*, *deep*, *stra* and *surf* all have the same scales. Below, I comment on the distributions and the correlations of the variables.
 
-```{r}
-summary (sub_learning2014$gender) 
-summary (sub_learning2014$Age)
-summary (sub_learning2014$attitude)
-summary (sub_learning2014$deep) 
-summary (sub_learning2014$stra)
-summary (sub_learning2014$surf)
-summary (sub_learning2014$Points)
+```{r Code part 2}
+summary (sub_learning2014)
 
-boxplot(sub_learning2014$Age)
-boxplot (sub_learning2014$attitude)
-boxplot (sub_learning2014$deep) 
-boxplot (sub_learning2014$stra)
-boxplot (sub_learning2014$surf)
-boxplot (sub_learning2014$Points)
+par(mfrow=c(1,2))
+boxplot(sub_learning2014$Age, main = "Age")
+boxplot (sub_learning2014$Points, main = "Points")
+
+par(mfrow=c(1,4))
+boxplot (sub_learning2014$attitude, main = "attitude toward statistics")
+boxplot (sub_learning2014$deep, main = "deep approach") 
+boxplot (sub_learning2014$stra, main = "strategic approach")
+boxplot (sub_learning2014$surf, main = "surface approach")
+
 
 pairs(sub_learning2014[-1], col = sub_learning2014$gender)
+library(GGally)
+library(ggplot2)
+
+ggpairs(sub_learning2014, lower = list(combo = wrap("facethist", bins = 20)))
+```
+
+* about 2/3 of the subjects are women
+* The distribution of Age is skewed towards the lower end of the scale with 75 % of the observations falling between (17,27).
+* The distribution of Points is pretty normal too. The observations seem to focus a little more on the upper side of the distribution.
+
+* The distribution of attitude is normal, not skewed, and seemes to have no outliers.
+* The distribution of deep is quite normal, and has two potential outliers in the lower end of the distribution.
+* The distribution of stra looks normal and seems to have no outliers.
+* The distribution of surf also looks normal and has one potential outlier in the upper end of the distribution.
+
+
+The strongest correlations are
+
+* attitude vs Points (positive)
+* deep vs surf (negative)
+* surf vs attitude (negative)
+* surf vs stra (negative)
+* stra vs Points (positive)
+* surf vs Points (negative)
+* surf vs Age (negative)
+* stra vs Age (positive)
+
+I find these correlations quite logical, e.g. good attitude is related with better points in the exam; attitude is related negatively with surface learning; surface learning is negatively related to points in the exam etc.
+
+## Part3.  
+Next, I will fit a regression model in which exam points is the target variable. I choose the explanatory variables (3) by the correlations shown above. Strongest correlations are found with attitude, stra and surf.
+
+```{r Code part 3}
+reg_model_3 <- lm(Points ~ attitude + stra + surf, data = sub_learning2014)
+summary(reg_model_3)
+```
+I notice that the only explanatory variable that is significant is attitude. I don't know whether multicollinearity has something to do with this, since I noticed that the variables stra and surf correlate. I decide to fit the model with both of these variables separately:
+
+```{r Code part 3 continues}
+reg_model_2a <- lm(Points ~ attitude + stra, data = sub_learning2014)
+summary(reg_model_2a)
+
+reg_model_2b <- lm(Points ~ attitude + surf, data = sub_learning2014)
+summary(reg_model_2b)
 
 ```
-The distribution of Age is skewed towards the lower end of the scale with 75 % of the observations falling between (17,27).
-The distribution of attitude is normal, not skewed, and seemes to have no outliers.
-The distribution of deep is quite normal, and has two potential outliers in the lower end of the distribution.
-The distribution of stra looks normal and seems to have no outliers.
-The distribution of surf also looks normal and has one potential outlier in the upper end of the distribution.
-The distribution of Points is pretty normal too. The observations seem to focus a little more on the upper side of the distribution.
+After deleting surf from the model, the explanatory variable stra came closer to the limit of significance. However, it didn't still reach the significance. 
+
+After deleting stra from the model, the explanatory variable surf still wasn't significant.
+
+So, it seems that the best model would include only the intercept and the explanatory variable attitude. Next, I'll fit this model:
+
+```{r Code part 4}
+reg_model_1 <- lm(Points ~ attitude , data = sub_learning2014)
+summary(reg_model_1)
 
 
+```
+## Part 4.   
+For this last model, where attitude is the only explanatory variable, I see that both the intercept and attitude are highly significant. This means that there is evidence of a linear relationship between attitude and exam points. With this model, the points of the course exam can be estimated taking the intercept (11.6) and adding 3.5 times the attitude-score. When estimating the exam points with this model, it should be noted that there is a standard error of 5.32, which indicates that the mean difference between the estimates given by the model and the actual observations is a little over 5. The multiple R squared means that almost 20 % of the variation in exam points is explained by the variation in attitude towards statistics. 
+
+## Part 5.  
+Next, I will explore the diagnostics of this model with three plots:
 
 
+```{r Code part 5}
+par(mfrow = c(2,2))
+plot(reg_model_1, which = c(1,2,5))
+
+```
 
 
+In linear regression, the normality of errors is assumed. I the QQ-plot I see that the fit to the line is pretty good overall, but for the values < -2 and > 2 there's some deviation from the line. However, I am not sure whether the fit is well enough to assume the normality of the residuals.
+
+Another assumption is that the size of the errors doesn't depend on the explanatory variable(s). In the residuals vs. fitted values -plot I see that the distribution of points is reasonably random, so there's no problem with the constant variance of errors -assumption. 
+
+Leverage explores how much impact a single observation has on the model. If I understand right, the leverage isn't high in this model, because no one point separates from the others in the picture, and the values of leverage (cook's d) are quite small. 
+
+Overall, the validity of the assumptions of the model looks quite good, but of course my eyes are not practiced to notice what amount of deviations are ok.
 
