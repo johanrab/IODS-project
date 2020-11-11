@@ -1,0 +1,134 @@
+# Report of exercise 3
+
+## The Data
+
+First, I read the data to RStudio and see that everything is ok.
+The data is joined from two datasets collected from two Portugese schools of secondary education. Data includes information about demographics, grades (mathematics and portugese), and social and school related issues.
+```{r Code part 2}
+alc <- read.csv("data/alc.csv", sep = ",", header = TRUE)
+colnames(alc)
+dim(alc)
+library(dplyr)
+library(ggplot2)
+```
+The data has 35 variables and 382 observations, so everything looks ok.
+
+## The explanatory variables and their distributions
+
+Second, I selected four different kinds of variables because I was curious how different issues might be related to alcohol consumption.
+
+I hypothesize that:
+
+* Being boy/man (variable sex) increases the likelihood of belonging to "high alcohol consumption" group
+
+* Better quality of family relationships (famrel) increases the likelihood of belonging to the "low alcohol consumption" group
+
+* More going out with friends (goout) increases the likelihood os belonging to "high alcohol consumption" group
+
+* Better grade (G1) increases the likelihood of belonging to the "low alcohol consumption" group
+
+Next, I present summary of the variable sex, and also two cross-tables of sex vs. alcohol consumption.
+```{r Code part 4}
+
+summary(as.factor(alc$sex))
+table(alc$sex, alc$high_use)
+table(alc$sex, alc$high_use) %>% prop.table(margin = 1)
+
+```
+There is about an equal amount of both sexes in the data. From the cross-tabulation it seems that greater percent of men belong to the high consumption -group, which might mean that there is a connection between these variables. As I hypothesized, men seem to consume more alcohol than women.
+
+Below is a summary for the family relations variable, and also summaries grouped by alcohol consumption. After the summaries I present a bar plot picturing the distribution of family relations for each alcohol consumption group.
+```{r}
+summary(alc$famrel)
+summary (alc$famrel[alc$high_use == TRUE])
+summary (alc$famrel[alc$high_use == FALSE])
+g2 <- ggplot(alc, aes(famrel, fill = high_use, ))
+g2 + geom_bar() + ggtitle ("Family relations for both alcohol consumption groups")
+```
+
+We see that overall, students report pretty good family relations (the distribution is skewed towards right). A quick look shows that the median value for both of the groups is 4. However, the distribution of the low consumption group seems to be more skewed towards higher values than the distribution of the high consumption group. This might mean that there is a relation between these variables (and if there is, the direction is as I hypothesized). 
+
+Below is a summary for the going out with friends -variable, and also summaries grouped by alcohol consumption. After the summaries I present a bar plot picturing the distribution of "going out with friends" for each alcohol consumption group.
+
+```{r}
+summary(alc$goout)
+summary(alc$goout[alc$high_use == TRUE])
+summary(alc$goout[alc$high_use == FALSE])
+g3 <- ggplot(alc, aes(goout, fill = high_use))
+g3 + geom_bar() + ggtitle ("Going out with friends for both alcohol consumption groups")
+```
+
+
+Overall, going out with friends -variable is somewhat normally distributed. However, it seems that the distributions for low and high consumption groups differ, and this might mean that there is a relationship between these variables. As I hypothesized, it seems that the students who go out with friends more use more alcohol than those students who go out with friends less.
+
+Below is a summary for the first period grade, and also summaries grouped by alcohol consumption. After the summaries I present boxplots picturing the distribution of first period grades for each alcohol consumption group.
+```{r}
+summary(alc$G1)
+summary(alc$G1[alc$high_use == TRUE])
+summary(alc$G1[alc$high_use == FALSE])
+g1 <- ggplot(alc, aes(x = high_use, y = G1))
+g1 + geom_boxplot() + ylab("grade") + ggtitle("First period grade for both alcohol consumption groups")
+```
+
+
+For the high consumption group, the distribution of G1 is skewed towards lower values. For the low consumption group the distribution is pretty normal, and the mean is higher for this group. As I hypothesized, it seems that students who get better grades consume less alcohol.
+
+## The logistic regression model for alcohol consumption
+
+Next, I explore the relationship of the four chosen variables and alcohol consumption:
+
+```{r}
+m <- glm(high_use ~ sex + famrel + goout + G1, data = alc, family = "binomial")
+summary(m)
+coef (m)
+OR <- coef(m) %>% exp
+CI <- confint(m) %>% exp
+print(cbind(OR, CI))
+```
+
+In my logistic regression model all the selected explanatory variables are significantly related to alcohol consumption. The overall interpretation of the model is as follows: Going out with friends and being male increase the likelihood of belonging to the high consumption group. Better family relations decrease this likelihood to some extent, and getting better grades also decreases the likelihood a little. 
+
+The exponents of the coefficients show odds ratios for each of the explanatory variables. Since none of the confidence intervals of the odds ratios of variables contain 1, each of the variables show a clear, either positive or negative, relationship with alcohol consumption. The interpretation of odds ratios feels very difficult, and I only can interpret the binary sex-variable:
+
+* CI for sex is [1.55 , 4.17] which means that the odds of a man belonging to high consumption group is between about 1.55 and four times the odds of women
+
+
+## Predictions
+
+```{r}
+probabilities <- predict(m, type = "response")
+alc <- mutate(alc, probability = probabilities)
+alc <- mutate(alc, prediction = probability > 0.5)
+
+table(high_use = alc$high_use, prediction = alc$prediction)
+table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins()
+
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+g + geom_point()
+
+
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = alc$high_use, prob = alc$probability)
+
+
+```
+
+From the prediction vs original grouping I see that:
+
+- The model predicts that ~ 82 % belong to the low consumption group and ~18 % belong to the high consumption group (as the original proportions are ~70 % and 30 %, respectively), so it seems to overestimate the number of individuals in the low consumption group
+
+- The overall proportion of wrong predictions is ~ 21,5 %
+
+When comparing the model to simple guessing strategy, where the success rate is 50 %, I see that the accuracy of the model (~ 78,5 %) is clearly better than that. However, the training error is still quite significant, and the model cannot be described as very precise. 
+
+```{r}
+library(boot)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv$delta[1]
+```
+
+My model seems to have better test set performance than the data camp model.
