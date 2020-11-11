@@ -1,5 +1,9 @@
 # Report of exercise 3
 
+## My learning this week
+
+I had quite a though week finishing a grant application, so I had a little less time to concentrate on the IODS-course. However, I felt that I realized the idea of logistic regression, and using of R felt a little easier than last week. It is still obvious that I'm a beginner with R, but I feel like I'm developing every week. The interpretation of odds ratios remains unclear to my and I hope that some of my referees might help me with this :)
+
 ## The Data
 
 First, I read the data to RStudio and see that everything is ok.
@@ -30,8 +34,13 @@ I hypothesize that:
 Next, I present summary of the variable sex, and also two cross-tables of sex vs. alcohol consumption.
 ```{r}
 
+#summary
 summary(as.factor(alc$sex))
+
+#crosstable
 table(alc$sex, alc$high_use)
+
+#crosstable with percentages
 table(alc$sex, alc$high_use) %>% prop.table(margin = 1)
 
 ```
@@ -39,9 +48,15 @@ There is about an equal amount of both sexes in the data. From the cross-tabulat
 
 Below is a summary for the family relations variable, and also summaries grouped by alcohol consumption. After the summaries I present a bar plot picturing the distribution of family relations for each alcohol consumption group.
 ```{r}
+#summary of family relations
 summary(alc$famrel)
+
+#summary of family relations for the high consumption group
 summary (alc$famrel[alc$high_use == TRUE])
+
+#summary of family relations for the low consumption group
 summary (alc$famrel[alc$high_use == FALSE])
+
 g2 <- ggplot(alc, aes(famrel, fill = high_use, ))
 g2 + geom_bar() + ggtitle ("Family relations for both alcohol consumption groups")
 ```
@@ -51,9 +66,15 @@ We see that overall, students report pretty good family relations (the distribut
 Below is a summary for the going out with friends -variable, and also summaries grouped by alcohol consumption. After the summaries I present a bar plot picturing the distribution of "going out with friends" for each alcohol consumption group.
 
 ```{r}
+# summary of the variable going out with friends
 summary(alc$goout)
+
+# summary of the variable going out with friends for the high use group
 summary(alc$goout[alc$high_use == TRUE])
+
+# summary of the variable going out with friends for the low use group
 summary(alc$goout[alc$high_use == FALSE])
+
 g3 <- ggplot(alc, aes(goout, fill = high_use))
 g3 + geom_bar() + ggtitle ("Going out with friends for both alcohol consumption groups")
 ```
@@ -63,9 +84,15 @@ Overall, going out with friends -variable is somewhat normally distributed. Howe
 
 Below is a summary for the first period grade, and also summaries grouped by alcohol consumption. After the summaries I present boxplots picturing the distribution of first period grades for each alcohol consumption group.
 ```{r}
+# summary of the first period grade
 summary(alc$G1)
+
+# summary of the first period grade for the high consumption group
 summary(alc$G1[alc$high_use == TRUE])
+
+# summary of the first period grade for the low consumption group
 summary(alc$G1[alc$high_use == FALSE])
+
 g1 <- ggplot(alc, aes(x = high_use, y = G1))
 g1 + geom_boxplot() + ylab("grade") + ggtitle("First period grade for both alcohol consumption groups")
 ```
@@ -92,6 +119,7 @@ The exponents of the coefficients show odds ratios for each of the explanatory v
 
 * CI for sex is [1.55 , 4.17] which means that the odds of a man belonging to high consumption group is between about 1.55 and four times the odds of women
 
+*Maybe some of my referees knows how to interpret the odds ratios and can help me? :)*
 
 ## Predictions
 
@@ -125,10 +153,11 @@ From the prediction vs original grouping I see that:
 
 When comparing the model to simple guessing strategy, where the success rate is 50 %, I see that the accuracy of the model (~ 78,5 %) is clearly better than that. However, the training error is still quite significant, and the model cannot be described as very precise. 
 
+Then, to estimate the true predictive power of the model, I performed a 10-fold cross-validation: 
 ```{r}
 library(boot)
 cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
 cv$delta[1]
 ```
 
-My model seems to have better test set performance than the data camp model.
+From the validation I see that my model seems to have better test set performance than the data camp model (0.22 vs 0.26)
