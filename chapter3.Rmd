@@ -4,7 +4,7 @@
 
 First, I read the data to RStudio and see that everything is ok.
 The data is joined from two datasets collected from two Portugese schools of secondary education. Data includes information about demographics, grades (mathematics and portugese), and social and school related issues.
-```{r Code part 2}
+```{r}
 alc <- read.csv("data/alc.csv", sep = ",", header = TRUE)
 colnames(alc)
 dim(alc)
@@ -28,7 +28,7 @@ I hypothesize that:
 * Better grade (G1) increases the likelihood of belonging to the "low alcohol consumption" group
 
 Next, I present summary of the variable sex, and also two cross-tables of sex vs. alcohol consumption.
-```{r Code part 4}
+```{r}
 
 summary(as.factor(alc$sex))
 table(alc$sex, alc$high_use)
