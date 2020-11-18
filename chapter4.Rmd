@@ -1,0 +1,167 @@
+---
+title: "chapter4.rmd"
+author: "Johanna Räbinä"
+date: "17 11 2020"
+output: html_document
+---
+
+### Report of exercise 4
+
+
+
+```{r}
+library(MASS)
+library(corrplot)
+library(dplyr)
+data(Boston)
+str(Boston)
+dim(Boston)
+
+```
+The Boston data has 506 observations (= suburbs) and 14 variables, which are type 'numeric' or 'integer'. The variables of the data contain information about housing in suburbs of Boston, e.g. crime rates, accessibility, economical details, pupil-teacher ratio etc.
+
+Next, let's explore tha data visually.
+```{r}
+par(fmrow = c(2,2))
+boxplot(Boston$crim, Boston$zn, Boston$age, Boston$medv)
+
+par(fmrow = c(2,3))
+boxplot(Boston$indus, Boston$rm, Boston$dis, Boston$rad, Boston$ptratio, Boston$lstat)
+
+par(fmrow = c(1,2))
+boxplot(Boston$chas, Boston$nox)
+
+boxplot(Boston$tax)
+boxplot(Boston$black)
+
+pairs(Boston)
+
+summary(Boston)
+
+cor_matrix<-cor(Boston) %>% round(digits=2)
+
+cor_matrix
+
+corrplot(cor_matrix, method="circle", type="upper", cl.pos="b",tl.pos="d",tl.cex=0.6)
+```
+
+From the boxplots we see that major of the variables are not normally distributed, and there are a lot of potential outliers.
+
+Pairs gives a scatterplot of co-variation of all the variables pairwise. From this visualization we see that:
+
+* the scales of the variables differ a lot from each other
+* there seem to be many variables which have some relationship with each other
+
+In the corrplot blue circles indicate a positive correlation between variables and red circles indicate a negative correlation. The size of the circle indicates the strength of the relationship between variables. From correlation matrix and corrplot we can see that overall, there are a lot of correlations between the variables. Variable chas seems to be pretty unrelated to all other variables.
+
+The strongest *positive* correlations are:
+
+* rad - tax 0.91
+* indus - nox 0.76
+* indus - tax 0.72
+* nox - age 0.73
+* rm - medv 0.70
+
+And the strongest *negative* correlations:
+
+* lstat - medv -0.74
+* age - dis -0.75
+* nox - dis -0.77
+* indus - dis -0.71
+
+Next, the data needs to be scaled for further analysis (because in linear discriminant analysis the variables need to have the same variance). After scaling, data has transformed as matrix, so let's change it to data frame again.
+
+```{r}
+
+boston_scaled <- scale(Boston)
+summary(boston_scaled)
+class(boston_scaled)
+boston_scaled <- as.data.frame(boston_scaled)
+
+par(fmrow = c(7,2))
+boxplot(boston_scaled)
+```
+
+Before scaling, there was e.g. one variable (chas) with variation [0,1] and another (tax) with variation [187,711]. After scaling, the mean of all the variables is the same (0), and all the values of all the variables are between about -4 and 10. 
+
+Our aim in the next analysis is to predict crime rates of the suburb with other variables. In order to do this with linear discriminant analysis, variable 'crim' must be categorized. After categorization the old crim-variable will be replaced with the categorized one. 
+
+```{r}
+summary(boston_scaled$crim)
+bins <- quantile(boston_scaled$crim)
+name_bins <- c("low","med_low","med_high","high")
+crime <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE,label=name_bins)
+table(crime)
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+boston_scaled <- data.frame(boston_scaled, crime)
+```
+
+
+Because we used the quantiles as cut-points, every category has about as many observations. So the categorization succeeded,
+
+
+Then the data will be split to train (80 %) and test (20 %) sets by first choosing randomly 80 % of the rows of the data, saving these to a new dataframe and then saving the rest of the rows to another dataframe. With test set it is possible to test the accuracy of the model that we'll build later. For accuracy testing, the correct crime classes are saved as their own variable.
+
+```{r}
+
+n <- nrow(boston_scaled)
+
+ind <- sample(n,  size = n * 0.8)
+
+train <- boston_scaled[ind,]
+
+test <- boston_scaled[-ind,]
+
+
+```
+
+
+Now, we are ready to fit a linear discriminant analysis to the train set. The goal is to see, which variables separate the crimerate-classes the best.
+
+```{r}
+lda.fit <- lda(crime~., data = train)
+
+
+lda.fit
+
+
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(train$crime)
+
+plot(lda.fit, dimen = 2, col=classes, pch=classes)
+lda.arrows(lda.fit, myscale = 2
+)
+
+```
+
+LD1 indicates the amount of variance between the groups explained by LD1. 
+
+Below, I'll take the correct crime rate classes from the test dataset and save them as a new variable. Then, I delete the original classes from the test data. After this, I'll predict crime rate classes with my LDA model, and compare the predicted vs. actual classes with a crosstable. After this I also made a dataframe comparing the correct and the predicted values and counted the percentage of correct predictions.
+
+```{r}
+
+correct_classes <- test$crime
+
+test <- dplyr::select(test, -crime)
+
+lda.pred <- predict(lda.fit, newdata = test)
+
+table(correct = correct_classes, predicted = lda.pred$class)
+
+row_names <- 1:102
+corr_pred <- data.frame(correct = correct_classes, pred = lda.pred$class, row.names = row_names)
+head(corr_pred)
+nrow(corr_pred[corr_pred$correct==corr_pred$pred,])/nrow(test)
+
+```
+With these train and test sets, my LDA model predicts about 70 % of the crime rate classes correctly. Because the sets are formed randomly, with other sets the accuracy of the model might differ a little from this. I think the accuracy of the model is quite good when considering that in the number the almost-correctly-predicted (e.g. low vs med_low, med_high vs. high) are not included.
+
+
