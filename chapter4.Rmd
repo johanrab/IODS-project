@@ -1,18 +1,24 @@
----
-title: "chapter4.rmd"
-author: "Johanna Räbinä"
-date: "17 11 2020"
-output: html_document
----
 
-### Report of exercise 4
+# Report of exercise 4
+
+My learning this week:
+Clustering and LDA were quite unfamiliar to me beforehand. I think I gained some (initial) understanding of them, but it is also possible that some parts of these methods demand more studying. As a useful detail from this week I will take with me the corrplots, which I found to be a very illustrative way to visualize the correlations between a group of variables.
+
+The Boston data was quite difficult to interpret since the variables were somewhat ambiguous to me (as I am not a economist or a sovial scientist).
 
 
+Below I present my report of the work performed this week.
+
+
+## Exploration the data
+
+First, I access the relevat libraries and take a look at the Boston data.
 
 ```{r}
 library(MASS)
 library(corrplot)
 library(dplyr)
+library (ggplot2)
 data(Boston)
 str(Boston)
 dim(Boston)
@@ -45,7 +51,7 @@ cor_matrix
 corrplot(cor_matrix, method="circle", type="upper", cl.pos="b",tl.pos="d",tl.cex=0.6)
 ```
 
-From the boxplots we see that major of the variables are not normally distributed, and there are a lot of potential outliers.
+From the boxplots we see that many variables are somewhat skewed, and there are a lot of potential outliers. I don't know if this is a problem when conducting LDA (the assumptions of LDA include normality of the explanatory variables).
 
 Pairs gives a scatterplot of co-variation of all the variables pairwise. From this visualization we see that:
 
@@ -68,6 +74,8 @@ And the strongest *negative* correlations:
 * age - dis -0.75
 * nox - dis -0.77
 * indus - dis -0.71
+
+## Preparation of the data for LDA
 
 Next, the data needs to be scaled for further analysis (because in linear discriminant analysis the variables need to have the same variance). After scaling, data has transformed as matrix, so let's change it to data frame again.
 
@@ -115,6 +123,7 @@ test <- boston_scaled[-ind,]
 
 ```
 
+## The LDA model
 
 Now, we are ready to fit a linear discriminant analysis to the train set. The goal is to see, which variables separate the crimerate-classes the best.
 
@@ -142,7 +151,10 @@ lda.arrows(lda.fit, myscale = 2
 
 ```
 
-LD1 indicates the amount of variance between the groups explained by LD1. 
+LD1 indicates the amount of variance between the groups explained by LD1 (about 95 %). If I understand right from the picture, in this model rad (an indication of accessibility) and zn (related to zoning) and nox (nitrogen oxides concentration) are the variables influencing the grouping the most. 
+
+
+## Prediction of the crime rate classes
 
 Below, I'll take the correct crime rate classes from the test dataset and save them as a new variable. Then, I delete the original classes from the test data. After this, I'll predict crime rate classes with my LDA model, and compare the predicted vs. actual classes with a crosstable. After this I also made a dataframe comparing the correct and the predicted values and counted the percentage of correct predictions.
 
@@ -164,4 +176,76 @@ nrow(corr_pred[corr_pred$correct==corr_pred$pred,])/nrow(test)
 ```
 With these train and test sets, my LDA model predicts about 70 % of the crime rate classes correctly. Because the sets are formed randomly, with other sets the accuracy of the model might differ a little from this. I think the accuracy of the model is quite good when considering that in the number the almost-correctly-predicted (e.g. low vs med_low, med_high vs. high) are not included.
 
+From LDA let's move on to clustering. For this purpose we start again with Boston data and scale it. After scaling, the distances between the observations will be counted with Euclidian and Manhattan -methods. Distance measures indicate how different the observations are from each other.
 
+```{r}
+data(Boston)
+new_boston <- scale(Boston)
+class(new_boston)
+new_boston <- as.data.frame(new_boston)
+
+dist_eu <- dist(new_boston)
+summary(dist_eu)
+dist_man <- dist(new_boston, method = "manhattan")
+summary(dist_man)
+```
+
+From the summaries of the distances, I see that different methods produce different results. 
+
+Now I'll run k-means algorithm on new_boston data and explore the results. I'll start with the same amount of clusters that was set with LDA. After that, I set the maximum amount of clusters to be 10 and explore what is the optimal cluster amount (by calculating the total of within sum of squares, when the number of cluster goes from 1 to 10).
+
+```{r}
+km <-kmeans(new_boston, centers = 4)
+set.seed(123)
+k_max <- 10
+twcss <- sapply(1:k_max, function(k){kmeans(new_boston, k)$tot.withinss})
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+```
+
+From the lineplot, the optimal number of clusters can be obtained by seeing where the line (i.e. the total of within sum of squares) drops radically. From this picture I see that 2 is the optimal number of clusters. So, next I'll set the number of clusters to be 2 and then explore the model visually.
+
+```{r}
+km <-kmeans(new_boston, centers = 2)
+pairs(new_boston[1:5], col = km$cluster)
+pairs(new_boston[6:10], col = km$cluster)
+```
+
+If I understand the pictures correctly (of which I'm not confident), it seems that the variables indus, nox, age, dis, rad and tax seem to effect the clustering result i.e. separate the suburbs from each other. I give an example of how I interpreted the images: for example variable 'indus': it seems that for lower values of indus there is mostly color black and when the values of indus grow the color changes to red. The variables that seem to sort the suburbs are related to e.g. industry, accessibility and taxing.
+
+Finally, the bonus exercise: clustering with k-means and then performing LDA for the resulted clusters.
+I run k-means with 4 clusters and save the clusters as their own column in the new_boston dataframe. 
+Then i fit the LDA model for these clusters. 
+
+```{r}
+data(Boston)
+summary(new_boston)
+set.seed(123)
+km <-kmeans(new_boston, centers = 4)
+new_boston$cluster_num <- as.factor(km$cluster)
+summary(new_boston$cluster_num)
+
+lda.fit.new <- lda(cluster_num~., data = new_boston)
+lda.fit.new
+
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(new_boston$cluster_num)
+
+plot(lda.fit.new, dimen = 2, col=classes, pch=classes)
+lda.arrows(lda.fit.new, myscale = 2
+)
+```
+
+In this 4-cluster model I see that LD1 explains about 70 %, LD2 about 20 % and LD 3 about 10 % of the amount of variance between the groups. From the biplot I see that the variable that separates the groups best seems to be black (proportion of blacks is town), and also some separation power have crim, indus and nox.
+
+
+## Concluding thought about the exercises this week:
+
+I think that these exercises made it clear that with the same data, very different results can be obtained with different classification methods, and also wiht different times of running the analysis with the same method. Conducting different modelings on the data was very interesting.
