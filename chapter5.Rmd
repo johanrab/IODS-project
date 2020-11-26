@@ -1,0 +1,79 @@
+---
+title: "chapter5.Rmd"
+author: "Johanna Räbinä"
+date: "26 11 2020"
+output: html_document
+---
+# Report of exercise 5
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploring the data
+
+First, I'll access the necessary libraries and load the data.
+Then I'll explore the dataset - all the variables and observations are in place.
+After this I'll explore the distributions and relations of the variables.
+
+```{r}
+library(dplyr)
+library(GGally)
+library(corrplot)
+human <- read.csv("data/human.csv", row.names = 1)
+
+dim(human)
+head(human)
+summary(human)
+
+ggpairs(human)
+
+cor_matrix_<-cor(human) %>% round(digits=2)
+cor_matrix_
+corrplot(cor_matrix_, method="circle", type="upper", cl.pos="b",tl.pos="d",tl.cex=0.6)
+```
+
+### Distributions of the variables:
+
+From summary I see that the variables are of very different scales.
+From ggpairs-picture I see that many of the variables are skewed:
+
+* skewed to the lower end of the distribution: GNI, Mat.mor, Ado.BR, Parl.rep
+* skewed to the upper end of the distribution: labratio, Life.exp
+* not very skewed: eduratio, Edu.exp
+
+### Relations between the variables:
+
+From correlation matrix and corrplot I see that there are a lot of correlations between the variables.
+The strongest positive correlations are between:
+
+* Ado.BR - Mar.mor
+* Edu.exp - Life.exp
+
+And the strongest negative correlations are between:
+
+* Life.exp - Mat.mor
+* Life.exp - Ado.BR
+* Edu.exp - Mat.mor
+* Edu.exp - Ado.BR
+
+Variables _Parl.rep_ and _labratio_ don't have very strong correlation with any of the other variables.
+
+Next, I'll move to the analysis part.
+
+
+## PCA with non-standardized data
+
+
+```{r}
+pca_human <- prcomp(human)
+summary(pca_human)
+biplot(pca_human, choices = 1:2, cex = c(0.8,1), col = c("grey40", "deeppink2"))
+```
+
+With these non-standardized variables the analysis doesn't seem to work very well. The first principal component captures allmost all of the variance, and variable _GNI_ correlates completely with that component. When I see the scales of the variables I see that _GNI_ values are of a much larger scale than any of the other variables, and this is why it is weighted so much in the analysis. Conclusion: With the non-standardized variables PCA doesn't serve its purpose: this analysis doesn't squeeze up the information of many variables, it only shows the distribution of observations based on the largest-scale variable.
+
+
+## PCA with standardized data
+
+
