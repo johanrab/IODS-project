@@ -67,13 +67,63 @@ Next, I'll move to the analysis part.
 
 ```{r}
 pca_human <- prcomp(human)
+pca_human
 summary(pca_human)
-biplot(pca_human, choices = 1:2, cex = c(0.8,1), col = c("grey40", "deeppink2"))
-```
 
-With these non-standardized variables the analysis doesn't seem to work very well. The first principal component captures allmost all of the variance, and variable _GNI_ correlates completely with that component. When I see the scales of the variables I see that _GNI_ values are of a much larger scale than any of the other variables, and this is why it is weighted so much in the analysis. Conclusion: With the non-standardized variables PCA doesn't serve its purpose: this analysis doesn't squeeze up the information of many variables, it only shows the distribution of observations based on the largest-scale variable.
+s0 <- summary(pca_human)
+s0
+pca_pr <- round(100*s0$importance[2, ], digits = 1)
+pca_pr
+
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+biplot(pca_human, choices = 1:2, cex = c(0.8,1), col = c("aquamarine", "blueviolet", xlab = pc_lab[1], ylab = pc_lab[2]))
+```
 
 
 ## PCA with standardized data
+
+First, I'll standardize the variables and check that the standardization went ok.
+Then I'll conduct PCA with the standardized data and take the summary and see the percentages of variance captured by the model.
+After this I'll draw a biplot with variance information on the axes.
+
+```{r}
+human_std <- scale(human)
+summary(human_std)
+
+pca_human_std <- prcomp(human_std)
+pca_human_std
+s <- summary(pca_human_std)
+s
+pca_std_pr <- round(100*s$importance[2, ], digits = 1)
+pca_std_pr
+
+pc_lab_std1 <- paste0("PC1: the 'antidevelopment' index", "(", pca_std_pr[1], "%)")
+
+pc_lab_std2 <- paste0("PC2: the position of women in the society", "(", pca_std_pr[2], "%)")
+
+biplot(pca_human_std, cex = c(0.6, 0.8), col = c("aquamarine", "blueviolet"), xlab = pc_lab_std1, ylab = pc_lab_std2)
+
+
+```
+
+
+### Interpretation of the model with non-standardized data
+
+With these non-standardized variables the analysis doesn't seem to work very well. The first principal component captures practically all of the variability, and variable _GNI_ correlates completely with that component. When I see the scales of the variables I see that _GNI_ values are of a much larger scale than any of the other variables, and this is why it is weighted so much in the analysis. Conclusion: With the non-standardized variables PCA doesn't serve its purpose: this analysis doesn't squeeze up the information of many variables, it only shows the distribution of observations based on the largest-scale variable.
+
+
+### Interpretation of the model and the first two principal component dimensons with standardized data
+
+PC1 captures ~54 % of the variability of the data, PC2 ~16 %, PC3 ~10% and PC4 ~8%. The number of components to include in the model is a tricky question, since there is no rule about which criteria should be applied. Using criteria that the total variance explained by the model should be something between 70-90 %, I would include 2 (almost 70 % of explained variance) 3 (79 %) or 4 (87 %) components. The two-component solution was quite easy to interpret, so that would pull on that side, but I am not sure if this is a relevant basis for the choice.
+
+From the biplot I see that the first component correlates strongly and positively with _adolescent birth rate_ and _maternal mortality rate_ and has negative correlations with _life expectancy_, _expected years of schooling_, _GNI_ and _proportion of females vs. males receiving secondary education_. Thus, the first component seems to be somewhat "general" index for "antidevelopment" of countries: the more a country has points in this component, the less it is developed. The second principal component correlates with _proportion of females vs. males in the labour force_ and _percetage of female representatives in parliament_, so it seems to indicate the position of women in the society: the more points a country has on this component, the more women get to participate in the societal actions (of course this is a simplification based on these variables). The variables are distributed to the components as could be predicted from the initial correlations: _Parl.rep_ and _labratio_ didn't correlate much with the other variables. 
+
+Let's also take a look at how the countries are situated in the picture. In the upper left side of the picture are "the most developed and equal countries", like many of the Northern countries. Respectively, in the bottom right side are the least developed and not equal countries like Mauritania, Afghanistan, Niger and Yemen. In the bottom part of the picture are those countries where women don't get to participate to the society very much, and logically there are e.g. many arabic countries. In the upper section of the picture there are countries in which women participate a lot in the society, and somewhat surprisingly there are many African countries (and not so surprisingly many Europian countries also).
+
+
+
+```{r}
+
+```
 
 
