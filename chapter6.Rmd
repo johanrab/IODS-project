@@ -1,0 +1,26 @@
+---
+title: "chapter6.Rmd"
+author: "Johanna Räbinä"
+date: "2 12 2020"
+output: html_document
+---
+
+# Report of exercise 6
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
