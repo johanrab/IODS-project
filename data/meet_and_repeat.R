@@ -56,6 +56,12 @@ head(RATSL)
 
 # Long form puts all the measurements of the target variable to the same column. So, each measurement of each subject has its own row. From the summary of the variables it is not possible to directly evaluate the changes in the target variable over time (as it was with the wide form). 
 
+write.csv(BPRSL, file = "data/BPRSL.csv", row.names = T)
+BPRSL <- read.csv("data/BPRSL.csv", row.names = 1)
+head(BPRSL)
 
+write.csv(RATSL, file = "data/RATSL.csv", row.names = T)
+RATSL <- read.csv("data/RATSL.csv", row.names = 1)
+head(RATSL)
 
-
+# it looks like I managed to write the files correctly
