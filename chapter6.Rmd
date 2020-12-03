@@ -7,20 +7,300 @@ output: html_document
 
 # Report of exercise 6
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+This week I only had time for the course exercises in the evenings after my working days. I also found this topic somewhat more complicated than many of the other topics in this course, so the combination of too little time and a difficult topic wasn't very good. However, I did a lot of work and got approximately everything done, and for that I'm glad. I did my best with the interpretations, but of course I am not very confident with those. 
+
+All in all, I think I have learned so much during this course and I am keen to take all these ideas with me when I conduct my doctoral dissertation.
+
+## RATS
+
+First, I access the necessary libraries, read the RATSL-data to R and convert ID and Group variables to factors.
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lme4)
+
+RATS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", header = TRUE, sep = '\t')
+
+RATSL <- read.csv("data/RATSL.csv", row.names = 1)
+head(RATSL)
+RATSL <- RATSL %>% mutate(ID = as.factor(RATSL$ID)) %>% mutate(Group = as.factor(RATSL$Group))
+str(RATSL)
+head(RATSL)
 ```
 
+The RATSL data contains measurements of weight development of rats (n = 16) during a 9-week period with three different diets. The data is converted to long form in which each measurement of each rat is on its own row. The purpose is to study whether the weight of rats develops in a different way with different diets. 
 
+Next, I draw a plot depicting the weight development in different diet groups.
+```{r}
+
+ggplot(RATSL, aes(x = Time, y = Weight, group = ID)) +
+  geom_line(aes(linetype=Group)) +
+  scale_x_continuous(name = "Time (days)", breaks = seq(0, 60, 10)) +
+   scale_y_continuous(name = "Weight (grams)") +
+   theme(legend.position = "top")
+
+```
+
+In this plot, we see the development of weight of each rat in the three diet groups. From the plot I notice that the mean initial weights vary between the groups: the weights of rats on diet 1 are initially much smaller than the weights of rats on diets 2 and 3. Roughly evaluating, the weights of rats on diets 2 and 3 grow maybe faster than the weights of rats on diet 1. Now, I'll conduct the standardization of the weights.
+
+```{r}
+RATSL <- RATSL %>%
+  group_by(Time) %>%
+  mutate(stdweight = (Weight-mean(Weight))/sd(Weight)) %>%
+  ungroup()
+
+glimpse(RATSL)
+
+
+ggplot(RATSL, aes(x = Time, y = stdweight, group = ID)) +
+  geom_line(aes(linetype=Group)) +
+  scale_x_continuous(name = "Time (days)", breaks = seq(0, 60, 10)) +
+   scale_y_continuous(name = "standardized weight)") +
+   theme(legend.position = "top")
+```
+
+In this plot of standardized weights, we see the development of the weight of each rat in the three diet groups compared to the average weight gain of all the rats at each time point. From this standardization I see that the weights of rats on diet 1 are approximately one standard deviation below average from beginning to end. If I understand correctly, horizontal line means that the weight of the rat develops at an average rate on that period; if the line goes downwards the weight of the rat develops slower than average on that period; and if the line goes upwards the weight of that rat develops faster than average on that period. Overall, it seems that the lines of diet group 2 go a little upwards, and the lines of diet groups 1 and 3 go horizontally or (for some of the rats) a little downwards. So, the weights of group 2 rats might develop a little faster than the weights of the rats in the other two groups. 
+
+``` {r}
+n <- RATSL$Time %>% unique() %>% length()
+RATSS <- RATSL %>%
+  group_by(Group, Time) %>%
+  summarise(mean = mean(Weight), se = sd(Weight)/sqrt(n)) %>%
+  ungroup()
+
+glimpse(RATSS)
+
+ggplot(RATSS, aes(x = Time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2,3)) +
+  geom_point(size=3) +
+  scale_shape_manual(values = c(1,2,3)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.8,0.5)) +
+  scale_y_continuous(name = "mean(Weight) +/- se(Weight)")
+```
+
+With this summarizing method we get the means of weights (variable _mean_)for each diet group for each measurement point, and the standard errors of the weights (variable _se_) for each diet group for each measurement point. From this line plot I see that all the groups differ from one another in every measurement point (the standard errors don't overlap), and the difference remains pretty similar from the beginning to the end. However, it also seems that group 2 is coming a little bit closer to group 3 during the measurement period. 
+
+The clear difference between the groups doesn't necessarily tell us that one diet is better than another, since some differences between the weight gain rate might reflect the initial differences between the rats.
+
+Next, I'll form the summary variable (mean) for body weights of measurements from days 8-64 (later, I'll consider the measurement of day 1 the baseline), and plot the means to track potential outliers.
+
+```{r}
+RATSL8S <- RATSL %>%
+  filter(Time > 1) %>%
+  group_by(Group, ID) %>%
+  summarise(mean=mean(Weight) ) %>%
+  ungroup()
+
+glimpse(RATSL8S)
+
+ggplot(RATSL8S, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Weight), days 8-64")
+
+```
+
+I see that there are three outliers, one in every group. To exclude the outliers, I came up with two methods: 1) to spot the outlier IDs and filter those IDs out or to set a weight limit for each group separately. I chose to do the latter. Then I'll draw new boxplots to see the distributions without outliers. I'll draw one picture with all the distributions to be able to compare the location of the distributions, and also three separate pictures to be able to explore each distribution more clearly.
+
+
+``` {r}
+RATSL8S
+
+group1 <- RATSL8S[RATSL8S$Group == 1,] 
+group2 <- RATSL8S[RATSL8S$Group == 2,]
+group3 <- RATSL8S[RATSL8S$Group == 3,]
+
+
+group1_ <- dplyr::filter(group1, mean > 250)
+group2_ <- dplyr::filter(group2, mean < 550)
+group3_ <- dplyr::filter(group3, mean > 500)
+
+
+RATSL8S1 <- rbind(group1_, group2_, group3_)
+
+is.data.frame(RATSL8S1)
+
+ggplot(RATSL8S1, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Weight), days 8-64")
+
+ggplot(group1_, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Weight), days 8-64")
+
+ggplot(group2_, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Weight), days 8-64")
+
+ggplot(group3_, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Weight), days 8-64")
+
+var(group1_$mean)
+var(group2_$mean)
+var(group3_$mean)
+
+```
+
+Now the outliers are gone. The distributions of the groups are at different levels; the difference between groups 2 and 3 grew after the exclusion of the outliers. The variances of the groups are pretty different, so I'll take note of it when performing variance analysis. Now I'm ready to find out if there's any statistical difference between the groups. I'll consider the measurement of day 1 as the baseline.
 
 ```{r}
 
+RATSL8S2 <- RATSL8S %>%
+  mutate(baseline = RATS$WD1)
+
+oneway.test(mean ~ Group, data = RATSL8S2, var.equal = F)
+
+fit <- lm(mean ~ baseline + Group, data = RATSL8S2)
+
+summary(fit)
+
+anova(fit)
+
 ```
 
+The result of the variance analysis means that
 
+* there is a statistical difference between the means of at least some of the groups; the weights of the rats on different diets differ on average from each other (at least there is a difference between some of the groups)
+* however, with this summary method it is not possible to reason whether this difference comes from the diet or from different qualities/starting points of the rats
+
+The results of the linear model and related anova mean that
+
+* the differences in the _baseline_ (day 1) measure of the weight have a statistical impact on the summary measure (mean weight of measurements from days 8-64)
+* the _Group_ coefficient doesn't reach significance. This means that when the difference in baseline weights is taken into account, different diets don't explain significantly the mean weight of the following days
+
+
+## BPRS
+
+I'll read the data to R, transform subject numbers of group 2 from 1-20 to 21-40 (for the purposes of later analysis), convert categorical variables to factors and explore the data a little.
+```{r}
+
+BPRSL <- read.csv("data/BPRSL.csv", row.names = 1)
+head(BPRSL)
+
+BPRSL_t1 <- dplyr::filter(BPRSL, treatment == 1)
+
+BPRSL_t2 <- dplyr::filter(BPRSL, treatment == 2)
+BPRSL_t2 <- mutate(BPRSL_t2, Subject = subject+20)
+BPRSL_t2$subject <- BPRSL_t2$Subject
+BPRSL_t2 <- dplyr::select(BPRSL_t2, -Subject)
+
+BPRSL <- rbind(BPRSL_t1, BPRSL_t2)
+
+BPRSL <- BPRSL %>% mutate(treatment = as.factor(BPRSL$treatment)) %>% mutate(subject = as.factor(BPRSL$subject))
+str(BPRSL)
+
+```
+
+The BPRSL data contains information about the development of psychiatric symptoms (measured by bprs-questionnaire) of patients that have been randomized to two different treatments. The data is collected during a period of 8 weeks (+ baseline measure, altogether 9 measurements). There were 40 subjects in the study. The data is in the long form, so there is a row for each measurement for each subject.
+
+Next, I'll explore the variability of the bprs scores based on time and treatments (with linear regression). At this point, I'll still ignore the repeated measure structure of the data. 
+
+```{r}
+BPRS_reg <- lm(bprs ~ week + treatment, data = BPRSL)
+
+summary(BPRS_reg)
+```
+
+The results of this _simple regression model_ suggest that...
+
+* there is no difference in bprs scores between the groups
+* variable week that indicates the effects of time is significant: this means that time has an impact on the scores in bprs.
+
+Next I'll take a look at the data with some line plots that take account into the repeated-measures structure of the data.
+```{r}
+
+ggplot(BPRSL, aes(x = week, y = BPRSL$bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRSL$bprs), max(BPRSL$bprs)))
+
+```
+
+From these plots I see that the variability of bprs scores decreases a little over the measurements. Roughly evaluating, the mean scores of the two groups look somewhat similar. Also it would seem that the scores decrease to some extent over time in both groups. In treatment group 2 there seems to be a bit more variability and more bumps in the trajectories than in group 1. I also see that the trajectories of the patients are unique and all of them don't follow the average direction.
+
+
+Next, I'll move on to _the random intercept model_ in which the model allows a unique intercept for each subject. This way the model takes into account that there might be initial differences between the patients (between-individual heterogeneity). After this I'll fit _the random intercept and random slope model_, which, in addition, makes it possible to account for the effects of time (within-individual biological variation).
+```{r}
+
+BPRS_ref <- lmer(bprs ~ week + treatment + (1 | subject), data = BPRSL, REML = FALSE)
+
+summary(BPRS_ref)
+
+BPRS_ref1 <- lmer(bprs ~ week + treatment + (week | subject), data = BPRSL, REML = FALSE)
+
+summary(BPRS_ref1)
+
+anova(BPRS_ref1, BPRS_ref)
+```
+
+From these results I see that the fit of the second model - _the random intercept and random slope model_ - is better than _the random intercept model_ (p-value is very small). 
+
+Next, I'll fit yet another model: _a random intercept and random slope model with week*treatment interaction_, and then I'll compare this to _the random intercept and random slope model without the interaction_. 
 
 ```{r}
 
+BPRS_ref2 <- lmer(bprs ~ week + treatment + week*treatment + (week | subject), data = BPRSL, REML = FALSE)
+
+summary(BPRS_ref2)
+
+anova(BPRS_ref2, BPRS_ref1)
+
+
+
 ```
 
+From the results of the variance analysis I see that the former and more simple model fits better with the BPRS data. So, this model doesn't need the inclusion of week*treatment interaction: the slope of the bprs development doesn't vary between the groups. The estimated regression parameters and their standard errors also suggest the same, i think: the standard error of regression parameter of _week:treatment2_ is large compared to the regression parameter itself. The same is true for regression parameter of _treatment2_, and the confidence interval of this parameter includes zero, so maybe this means that the model might be better without _treatment_ as an explanatory variable? Thus, i'll try an even more simple model:
+
+```{r}
+
+BPRS_ref3 <- lmer(bprs ~ week + (week | subject), data = BPRSL, REML = FALSE)
+summary(BPRS_ref3)
+
+anova(BPRS_ref3, BPRS_ref1)
+
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRSL$bprs), max(BPRSL$bprs)))
+
+Fitted <- fitted(BPRS_ref1)
+
+BPRSL <- mutate(BPRSL, fitted = Fitted)
+
+ggplot(BPRSL, aes(x = week, y = fitted, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRSL$fitted), max(BPRSL$fitted)))
+
+Fitted_ref3 <- fitted(BPRS_ref3)
+
+BPRSL <- mutate(BPRSL, fitted_ref3 = Fitted_ref3)
+
+ggplot(BPRSL, aes(x = week, y = fitted_ref3, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRSL$fitted), max(BPRSL$fitted)))
+
+```
+
+I don't understand what the convergence error means and whether I can still interpret this model? If I interpret it anyhow, from the anova I would see that the model 1 ( _random intercept and random slope model with two explanatory variables_ ) is not a better fit than model 3 ( _random intercept and random slope model with only one explanatory variable, week_ ). Overall, this would mean that time, not the differences between the treatments, explains the development of the bprs scores. There is also some between-individual heterogeneity and within-individual biological variation that the model takes into account. 
+
+I draw the fitted value plots for both models: _random intercept and random slope model with two explanatory variables_ and _random intercept and random slope model with only one explanatory variable, week_. These plots look very similar. I don't know how to interpret the fit of the model from these plots: When comparing to the original picture with the actual bprs scores, I think the fitted value -pictures look very simple. In the original photos there seem to be a lot of "noise" and not so linear trajectories. 
 
